@@ -12,7 +12,7 @@
 * `cdk synth`       emits the synthesized CloudFormation template
 
 ## 方案架构
-![image](https://github.com/heqiqi/Rate-Limit-By-LambdaEdge/blob/main/images/rate-carch.png)
+![image](https://github.com/heqiqi/Rate-Limit-By-LambdaEdge/blob/main/images/rate-arch.png)
 
 ## 使用命令
 ```
