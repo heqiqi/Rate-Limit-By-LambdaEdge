@@ -9,6 +9,7 @@ import { RemovalPolicy, CfnOutput } from 'aws-cdk-lib';
 import { DeployLambdaEdge } from './deploy-lambd-edge-construct';
 import { WafCloudFrontStack } from './wafv2-cloudfront-construct';
 
+import {readFileSync} from 'fs';
 
 export class RateLimitCfStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -22,9 +23,18 @@ export class RateLimitCfStack extends cdk.Stack {
     const rateLimit = new cdk.CfnParameter(this, 'rateLimit', {
       description: 'Total rate limited requests per minute',
       type: 'Number',
-      default: process.env.RATE || 50,
+      default: process.env.RATE || 30,
     });
-
+    const urlRateLimit = new cdk.CfnParameter(this, 'urlRateLimit', {
+      description: 'Url rate limited requests per minute',
+      type: 'Number',
+      default: process.env.RATE || 10,
+    });
+    const urlList = new cdk.CfnParameter(this, 'urlList', {
+      description: 'Url List, format: \'/foo,/bar\'',
+      type: 'String',
+      default: process.env.RATE || '[]',
+    });
     const ipSetNumber = new cdk.CfnParameter(this, 'ipSetNumber', {
       description: 'Quantity of Ipset, default 5',
       type: 'Number',
@@ -76,11 +86,17 @@ export class RateLimitCfStack extends cdk.Stack {
         iam.ManagedPolicy.fromAwsManagedPolicyName('AWSWAFFullAccess'),
     ]
     });
+    const userDataOfLambda = readFileSync('./lambda/rate-limit.js', 'utf8')
+    .replace('cf-country-mobile-rate-limit',table.tableName)
+    .replace('black-ip-list',blackIpTable.tableName)
+    .replace('GLOBAL_RATE_RRRRR', rateLimit.valueAsNumber+'')
+    .replace('URL_LIST_RRRRR', urlList.valueAsString)
+    .replace('URL_RATE_RRRRR', urlRateLimit.valueAsNumber+'');
 
     const RateLimitLambda = new lambda.Function(this, 'RateLimitLambdaEdge', {
       runtime: lambda.Runtime.NODEJS_16_X,    // execution environment
-      code: lambda.Code.fromAsset('lambda'),  // code loaded from "lambda" directory
-      handler: 'rate-limit.handler',
+      code: lambda.Code.fromInline(userDataOfLambda),  // code loaded from "lambda" directory
+      handler: 'index.handler',
       memorySize: 1024,
       timeout: cdk.Duration.seconds(30),
       role: lambdaExecuteRole,

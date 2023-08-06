@@ -15,11 +15,11 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
 ## 使用命令
 ```
-cdk deploy --parameters cfDistId=E36TELAKGOJXZN --parameters rateLimit=50 --parameters ipSetNumber=5  
+cdk deploy --parameters cfDistId=E36TELAKGOJXZN --parameters rateLimit=30 --parameters urlRateLimit=20 --parameters urlList='/foo,/bar,/bar/1' --parameters ipSetNumber=5   
 ```
 ### 参数说明：
 ```
-cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总限速速率，每分钟> --parameters ipSetNumber=<ipsets 数量> 
+cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总限速速率，每分钟> --parameters urlRateLimit=<url限速速率> --parameters urlList=<URL list> --parameters ipSetNumber=<ipsets 数量> 
 ```
 
 ## 问题

@@ -4,23 +4,21 @@ const TABLE_REGION =   'us-east-1'
 const TABLE_NAME = (process.env.TABLE_NAME == null) ? 'cf-country-mobile-rate-limit' : process.env.TABLE_NAME
 /// Name of the block Ip table 
 const IP_TABLE_NAME = (process.env.IP_TABLE_NAME == null) ? 'black-ip-list' : process.env.IP_TABLE_NAME
+
 /// allowed nation
 const ALLOWED_COUNTRY = (process.env.ALLOWED_COUNTRY == null) ? 'KH,CN,HK,MY,PH,SA,TH,VN,UA,SG,MM' : process.env.ALLOWED_COUNTRY
 
 /// Windows duration, default value: 1 minutes 
 const WINDOW_PERIOD_IN_SECONDS = (process.env.WINDOW_PERIOD_IN_SECONDS == null) ? 1 * 60 * 1000 : Number(process.env.WINDOW_PERIOD_IN_SECONDS) * 1000
 
-/// INVALIDED_NATION_RATE
-const INVALIDED_COUNTRY_RATE = (process.env.INVALIDED_COUNTRY_RATE == null) ? 10 : Number(process.env.INVALIDED_COUNTRY_RATE)
+/// GLOBAL_RATE
+const GLOBAL_RATE = (process.env.GLOBAL_RATE == null) ? 'GLOBAL_RATE_RRRRR' : Number(process.env.GLOBAL_RATE)
 
-/// IOS Mobile UA Rate
-const IOS_RATE = (process.env.IOS_ANDROID_RATE == null) ? 100 : Number(process.env.IOS_ANDROID_RATE)
+/// URL_RATE
+const URL_RATE = (process.env.URL_RATE == null) ? 'URL_RATE_RRRRR' : Number(process.env.URL_RATE)
 
-/// Android Mobile UA Rate
-const ANDROID_RATE = (process.env.IOS_ANDROID_RATE == null) ? 80 : Number(process.env.IOS_ANDROID_RATE)
-
-/// Default Rate
-const DEFAULT_RATE = (process.env.DEFAULT_RATE == null) ? 70 : Number(process.env.DEFAULT_RATE)
+/// URL_LIST
+const URL_LIST = (process.env.URL_LIST == null) ? 'URL_LIST_RRRRR' : Number(process.env.URL_LIST)
 
 /// Duration of black ， 4 hours
 const BLOCK_PERIOD = (process.env.BLOCK_PERIOD == null) ? 4*60*60*1000 : process.env.BLOCK_PERIOD
@@ -108,6 +106,7 @@ function isIosClient(request){
 function isAndroidClient(request){
     return (request.headers['cloudfront-is-android-viewer'] != null && request.headers['cloudfront-is-android-viewer'][0].value == "true");
 }
+
 //cloudfront-is-tablet-viewer
 
 function isTabletClient(request){
@@ -245,12 +244,10 @@ exports.handler =  async function (event, context, callback) {
 
     const request = event.Records[0].cf.request
     if(isInWhiteList(request)){
-        // console.log("isInWhiteList: " + getIp(request));
         callback(null, request);
         return;
     }
     if(await isBlocked(getIp(request))) {
-        // console.log("isBlocked: " + getIp(request));
         callback(null, rateLimit());
         return;
     }
@@ -259,13 +256,11 @@ exports.handler =  async function (event, context, callback) {
     let uri = getUri(request)
     let ipUrlCount = {}
     ipUrlCount = await queryItems(TABLE_NAME, getIp(request), (Date.now() - (3 * 60 * 1000)))
-    let urlList = ['/website-images','/data/info']
+    let urlList = JSON.stringify(URL_LIST)
     for(let u in urlList){
-         console.log("special url1: " +uri +' u: ' +u);
+         console.log("url1: " +uri +' u: ' +u);
         if(uri.indexOf(urlList[u]) != -1){
-        console.log("in if special url1: " +uri +' u: ' + urlList[u]);
-        let country = getCountry(request)
-        let rate = (country == 'CN') ? 50 : 40
+        let rate = Number(URL_RATE);
          if(ipUrlCount.Count == null || (ipUrlCount.Count >0 && urlMatchCount(ipUrlCount.Items, uri) >= rate)){
             await createIps(IP_TABLE_NAME,getIp(request));
             callback(null, rateLimit());
@@ -276,14 +271,9 @@ exports.handler =  async function (event, context, callback) {
     
     let ipCount = {}
     ipCount = await queryItems(TABLE_NAME, getIp(request), (Date.now() - WINDOW_PERIOD_IN_SECONDS))
-    // console.log("ddb returns: " + JSON.stringify(ipCount));
-    let LimitRate = calRate(request);
-    // console.log("LimitRate:" + LimitRate);
+    let LimitRate = Number(GLOBAL_RATE);
+    console.log("LimitRate:" + LimitRate);
     let urlCount = 0
-    if(urlList.indexOf(uri) != -1){
-        urlCount = urlMatchCount(ipCount.Items, uri)
-    }
-    console.log(' LimitRate ' + LimitRate +' urlCount ' + urlCount +' '+ipCount.Count);
     if(ipCount.Count == null || (ipCount.Count-urlCount) >= LimitRate){
         await createIps(IP_TABLE_NAME,getIp(request));
         callback(null, rateLimit());
