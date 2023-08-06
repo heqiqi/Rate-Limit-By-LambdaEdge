@@ -1,13 +1,14 @@
 /// TABLE Region 
-const TABLE_REGION = (process.env.TABLE_REGION == null) ? 'ap-northeast-1' : process.env.TABLE_REGION
+const TABLE_REGION =   'us-east-1'
 /// Name of the Ip Rate table 
 const TABLE_NAME = (process.env.TABLE_NAME == null) ? 'cf-country-mobile-rate-limit' : process.env.TABLE_NAME
 /// Name of the block Ip table 
-const IP_TABLE_NAME = (process.env.IP_TABLE_NAME == null) ? 'black_ip_list' : process.env.IP_TABLE_NAME
+const IP_TABLE_NAME = (process.env.IP_TABLE_NAME == null) ? 'black-ip-list' : process.env.IP_TABLE_NAME
 /// allowed nation
 const ALLOWED_COUNTRY = (process.env.ALLOWED_COUNTRY == null) ? 'KH,CN,HK,MY,PH,SA,TH,VN,UA,SG,MM' : process.env.ALLOWED_COUNTRY
-/// Windows duration, default value: 5 minutes 
-const WINDOW_PERIOD_IN_SECONDS = (process.env.WINDOW_PERIOD_IN_SECONDS == null) ? 10 * 60 * 1000 : Number(process.env.WINDOW_PERIOD_IN_SECONDS) * 1000
+
+/// Windows duration, default value: 1 minutes 
+const WINDOW_PERIOD_IN_SECONDS = (process.env.WINDOW_PERIOD_IN_SECONDS == null) ? 1 * 60 * 1000 : Number(process.env.WINDOW_PERIOD_IN_SECONDS) * 1000
 
 /// INVALIDED_NATION_RATE
 const INVALIDED_COUNTRY_RATE = (process.env.INVALIDED_COUNTRY_RATE == null) ? 10 : Number(process.env.INVALIDED_COUNTRY_RATE)
@@ -21,8 +22,10 @@ const ANDROID_RATE = (process.env.IOS_ANDROID_RATE == null) ? 80 : Number(proces
 /// Default Rate
 const DEFAULT_RATE = (process.env.DEFAULT_RATE == null) ? 70 : Number(process.env.DEFAULT_RATE)
 
-/// Duration of black 
+/// Duration of black ， 4 hours
 const BLOCK_PERIOD = (process.env.BLOCK_PERIOD == null) ? 4*60*60*1000 : process.env.BLOCK_PERIOD
+
+/// 
 
 /// request region
 const { AWS_REGION } = process.env.AWS_REGION;
@@ -34,7 +37,7 @@ const replicatedRegions = {
   'us-west-2': false,
   'eu-central-1': false,
   'ap-southeast-1': false,
-  'ap-northeast-1': true,
+  'ap-northeast-1': false,
   'ap-east-1': false
 };
 

@@ -2,9 +2,12 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import { RemovalPolicy, CfnOutput } from 'aws-cdk-lib';
+import { DeployLambdaEdge } from './deploy-lambd-edge-construct';
+import { WafCloudFrontStack } from './wafv2-cloudfront-construct';
 
 
 export class RateLimitCfStack extends cdk.Stack {
@@ -14,62 +17,116 @@ export class RateLimitCfStack extends cdk.Stack {
     const cfDistId = new cdk.CfnParameter(this, 'cfDistId', {
       description: 'CloudFront distribution id on which the Lambda@Edge is deployed',
       type: 'String',
-      default: process.env.DISTRIBUTE || "abc123",
+      default: process.env.DISTRIBUTE || "E3O37UQQXPQMPO",
     });
     const rateLimit = new cdk.CfnParameter(this, 'rateLimit', {
       description: 'Total rate limited requests per minute',
       type: 'Number',
       default: process.env.RATE || 50,
     });
-    
+
+    const ipSetNumber = new cdk.CfnParameter(this, 'ipSetNumber', {
+      description: 'Quantity of Ipset, default 5',
+      type: 'Number',
+      minValue: 1,
+      maxValue: 10,
+      default: process.env.RATE || 5,
+    });
+
     const table = new dynamodb.Table(this, 'Request-Rate-Limit-Access', {
       partitionKey: {
         name: 'ip',
         type: dynamodb.AttributeType.STRING
-      }, 
+      },
       sortKey: {
         name: 'createdAt',
         type: dynamodb.AttributeType.NUMBER
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      removalPolicy: RemovalPolicy.DESTROY, 
+      removalPolicy: RemovalPolicy.DESTROY,
     });
     const blackIpTable = new dynamodb.Table(this, 'Black-Ip-List', {
       partitionKey: {
         name: 'ip',
         type: dynamodb.AttributeType.STRING
-      }, 
+      },
       sortKey: {
         name: 'createdAt',
         type: dynamodb.AttributeType.NUMBER
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      removalPolicy: RemovalPolicy.DESTROY, 
+      removalPolicy: RemovalPolicy.DESTROY,
     });
+    blackIpTable.addGlobalSecondaryIndex({
+      indexName: 'secondIndex-createAt-index',
+      partitionKey: {
+        name: 'secondIndex',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'createdAt',
+        type: dynamodb.AttributeType.NUMBER
+      },
+    });
+
     const lambdaExecuteRole = new iam.Role(this, 'lambda-execute-role', {
       assumedBy: new iam.CompositePrincipal(new iam.ServicePrincipal("lambda.amazonaws.com"), new iam.ServicePrincipal("edgelambda.amazonaws.com")),
-      managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')]
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AWSWAFFullAccess'),
+    ]
     });
+
     const RateLimitLambda = new lambda.Function(this, 'RateLimitLambdaEdge', {
       runtime: lambda.Runtime.NODEJS_16_X,    // execution environment
       code: lambda.Code.fromAsset('lambda'),  // code loaded from "lambda" directory
       handler: 'rate-limit.handler',
       memorySize: 1024,
-      timeout: cdk.Duration.seconds(30),       
-      role: lambdaExecuteRole,         
+      timeout: cdk.Duration.seconds(30),
+      role: lambdaExecuteRole,
     });
     // fullaccess to dynamodb
     table.grantFullAccess(RateLimitLambda);
     blackIpTable.grantFullAccess(RateLimitLambda);
-
     const edgeFuncVersion = RateLimitLambda.currentVersion
 
-    // const iDistribution = cloudfront.Distribution.fromDistributionAttributes(this, 'distribution', {
-    //   distributionId: 'foo',
-    //   domainName: 'bar',
-    // });
-    
-   new CfnOutput(this, 'DdbTableName', { value: table.tableName });
-    
-    }
+    const wafConstruct = new WafCloudFrontStack(this, 'WafCloudFrontStack', {
+      ipSetNumber: ipSetNumber.valueAsNumber,
+      distributionId: cfDistId.valueAsString,
+    });
+
+    const UpdateWafLambda = new lambda.Function(this, 'UpdateWafLambda', {
+      runtime: lambda.Runtime.NODEJS_16_X,    // execution environment
+      code: lambda.Code.fromAsset('lambda'),  // code loaded from "lambda" directory
+      handler: 'update-ipset.handler',
+      memorySize: 2048,
+      timeout: cdk.Duration.seconds(120),
+      role: lambdaExecuteRole,
+      environment: {
+        TABLE_NAME: blackIpTable.tableName,
+        WAFV2_IPSETS: JSON.stringify(wafConstruct.ipSets)
+      }
+    });
+    blackIpTable.grantFullAccess(UpdateWafLambda);
+
+    new events.Rule(this, 'UpdateWaf-Schedule-Cronjob', {
+      schedule: events.Schedule.cron({ minute: '0/1' }), // Trigger  every min
+      targets: [new targets.LambdaFunction(UpdateWafLambda)],
+    });
+
+    const cfLambda = new DeployLambdaEdge(this, 'CustomResourceDeploy', {
+      funcName: RateLimitLambda.functionName,
+      funcVersion: edgeFuncVersion.version,
+      distributionId: cfDistId.valueAsString,
+      webacl: wafConstruct.waf.attrArn,
+    }).cfLambda;
+    cfLambda.node.addDependency(RateLimitLambda);
+    cfLambda.node.addDependency(wafConstruct);
+
+    new CfnOutput(this, 'DdbTableName', { value: table.tableName });
+    new CfnOutput(this, 'BlackIpTableName', { value: blackIpTable.tableName });
+    new CfnOutput(this, 'LambdaDeployFunc', { value: cfLambda.functionArn });
+    new CfnOutput(this, 'WebAcl', { value: wafConstruct.waf.attrArn });
+
+  }
 }

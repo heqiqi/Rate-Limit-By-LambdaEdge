@@ -12,3 +12,16 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 * `cdk deploy`      deploy this stack to your default AWS account/region
 * `cdk diff`        compare deployed stack with current state
 * `cdk synth`       emits the synthesized CloudFormation template
+
+## 使用命令
+```
+cdk deploy --parameters cfDistId=E36TELAKGOJXZN --parameters rateLimit=50 --parameters ipSetNumber=5  
+```
+### 参数说明：
+```
+cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总限速速率，每分钟> --parameters ipSetNumber=<ipsets 数量> 
+```
+
+## 问题
+- cdk 不能使用循环，ipsets数量不能控制。
+- 删除stack时，lambda@edge function 失败。
