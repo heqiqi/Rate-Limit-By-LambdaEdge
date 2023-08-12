@@ -16,11 +16,11 @@
 
 ## 使用命令
 ```
-cdk deploy --parameters cfDistId=E36TELAKGOJXZN --parameters rateLimit=30 --parameters urlRateLimit=20 --parameters urlList='/foo,/bar,/bar/1' --parameters ipSetNumber=5   
+cdk deploy --parameters cfDistId=E36TELAKGOJXZN --parameters rateLimit=30 --parameters urlRateLimit=20 --parameters urlList='/foo,/bar,/bar/1' --parameters ipSetNumber=5    --profile aws_cli_useast1
 ```
 ### 参数说明
 ```
-cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总限速速率，每分钟> --parameters urlRateLimit=<url限速速率> --parameters urlList=<URL list> --parameters ipSetNumber=<ipsets 数量> 
+cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总限速速率，每分钟> --parameters urlRateLimit=<url限速速率> --parameters urlList=<URL list> --parameters ipSetNumber=<ipsets 数量>  --profile <profile>
 ```
 
 ## 问题
