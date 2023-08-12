@@ -30,7 +30,7 @@ async function getLambdaArn() {
 
 async function associateLambda(config) {
     const lambdaArn = await getLambdaArn();
-    console.log(`lambdaArn: ${lambdaArn}`);
+    // console.log(`lambdaArn: ${lambdaArn}`);
 
     // Update CloudFront
     return await cf.updateDistribution(config).promise();
@@ -60,7 +60,7 @@ exports.handler = async (event) => {
 
     const response = {
         statusCode: 200,
-        body: 'associated with Lambda for distribution: ' + distributionId,
+        body: 'associated with L@E for: ' + distributionId,
     };
     return response;
 };

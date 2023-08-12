@@ -27,12 +27,12 @@ export class DeployLambdaEdge extends Construct {
             ]
         });
 
-        const CustomResourceLambda = new lambda.Function(this, 'RateLimitLambdaEdge', {
+        const CustomResourceLambda = new lambda.Function(this, 'AssociaterEdgeAndWafLambda', {
             runtime: lambda.Runtime.NODEJS_16_X,    // execution environment
             code: lambda.Code.fromAsset('lambda'),  // code loaded from "lambda" directory
             handler: 'lambda-cf-associater.handler',
             memorySize: 1024,
-            timeout: cdk.Duration.seconds(60),
+            timeout: cdk.Duration.seconds(180),
             role: lambdaExecuteRole,
             environment: {
                 funcName: props.funcName,
@@ -60,6 +60,7 @@ export class DeployLambdaEdge extends Construct {
                 parameters: {
                     FunctionName: CustomResourceLambda.functionName,
                 },
+                outputPaths: ['Contents.0.Key'],
                 physicalResourceId: cr.PhysicalResourceId.of(`create-exec-${Date.now()}`) // update this for different resources
             },
             onUpdate: {
