@@ -67,7 +67,7 @@ function originLambdaErr () {
 const AWS = require('aws-sdk')
 const ddb = new AWS.DynamoDB.DocumentClient({
     apiVersion: '2012-10-08',
-    region: replicatedRegions[process.env.AWS_REGION] ? process.env.AWS_REGION : 'ap-northeast-1',
+    region: replicatedRegions[process.env.AWS_REGION] ? process.env.AWS_REGION : 'us-east-1',
     //sslEnabled: false, 
     paramValidation: false, 
     convertResponseTypes: false,
@@ -127,26 +127,6 @@ function isInAllowedCountry(request){
         return countries.indexOf(countryCode) != -1;
     }
     return false;
-}
-
-function calRate (req) {
-    if(isInAllowedCountry(req)){
-        // console.log("allow country");
-        if(isIosClient(req)){
-            // console.log("mobile ios");
-            return IOS_RATE; /// 30次/10min
-        }else if(isAndroidClient(req)) {
-            // console.log("mobile android");
-            return ANDROID_RATE;/// 25次/10min
-        }else{
-            // console.log("unmobile");
-            return DEFAULT_RATE; /// 10次/10min
-        }
-        
-    }else{
-        // console.log("unallow country");
-        return INVALIDED_COUNTRY_RATE; /// 10次/10min
-    }
 }
 
 function accessLogFactory(req){
@@ -255,10 +235,10 @@ exports.handler =  async function (event, context, callback) {
 
     let uri = getUri(request)
     let ipUrlCount = {}
-    ipUrlCount = await queryItems(TABLE_NAME, getIp(request), (Date.now() - (3 * 60 * 1000)))
-    let urlList = JSON.stringify(URL_LIST)
+    ipUrlCount = await queryItems(TABLE_NAME, getIp(request), (Date.now() - WINDOW_PERIOD_IN_SECONDS))
+    let urlList = URL_LIST.split(',');
     for(let u in urlList){
-         console.log("url1: " +uri +' u: ' +u);
+         console.log("url1: " +uri +' u: ' + urlList[u]);
         if(uri.indexOf(urlList[u]) != -1){
         let rate = Number(URL_RATE);
          if(ipUrlCount.Count == null || (ipUrlCount.Count >0 && urlMatchCount(ipUrlCount.Items, uri) >= rate)){

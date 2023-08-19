@@ -18,7 +18,7 @@ export class WafCloudFrontStack extends Construct {
     constructor(scope: Construct, id: string, props: WafDeployConstructProps) {
         super(scope, id);
         const accountID = cdk.Stack.of(this).account;
-        const ipSetCount = 5; 
+        const ipSetCount = 10; 
         //const ipSetCount = props.ipSetNumber;
         // Create IpSet and rules
         let blockRules = []
@@ -46,7 +46,7 @@ export class WafCloudFrontStack extends Construct {
               ipSetInfo.push({name:  ipSet.name, set: ipSet.attrId})
         }
         this.ipSets = ipSetInfo;
-
+        blockRules.push
         // Create the WebACL
         const webAcl = new wafv2.CfnWebACL(this, 'WebACL-Rate-Limit', {
             defaultAction: {

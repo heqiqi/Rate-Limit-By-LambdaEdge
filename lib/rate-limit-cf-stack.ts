@@ -49,7 +49,7 @@ export class RateLimitCfStack extends cdk.Stack {
         type: dynamodb.AttributeType.STRING
       },
       sortKey: {
-        name: 'createdAt',
+        name: 'createAt',
         type: dynamodb.AttributeType.NUMBER
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -61,7 +61,7 @@ export class RateLimitCfStack extends cdk.Stack {
         type: dynamodb.AttributeType.STRING
       },
       sortKey: {
-        name: 'createdAt',
+        name: 'createAt',
         type: dynamodb.AttributeType.NUMBER
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -74,7 +74,7 @@ export class RateLimitCfStack extends cdk.Stack {
         type: dynamodb.AttributeType.STRING
       },
       sortKey: {
-        name: 'createdAt',
+        name: 'createAt',
         type: dynamodb.AttributeType.NUMBER
       },
     });

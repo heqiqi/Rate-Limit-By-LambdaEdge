@@ -6,11 +6,13 @@
 const TABLE_REGION = (process.env.TABLE_REGION == null) ? 'us-east-1' : process.env.TABLE_REGION
 /// Name of the black ip  table 
 const TABLE_NAME = (process.env.TABLE_NAME == null) ? 'black_ip_list' : process.env.TABLE_NAME
+/// Ips of black 
+const WAFV2_IPSETS = (process.env.WAFV2_IPSETS == null) ? '[]' : process.env.WAFV2_IPSETS
 /// Duration of black 
-const WAFV2_IPSETS = (process.env.IPSWAFV2_IPSETSETS == null) ? '[]' : process.env.WAFV2_IPSETS
+const BLOCK_PERIOD = (process.env.BLOCK_PERIOD == null) ? 4*60*60*1000 : process.env.BLOCK_PERIOD
 
 /// ipset on WAFv2
-const IPSETS = JSON.stringify(WAFV2_IPSETS);
+const IPSETS = JSON.parse(WAFV2_IPSETS);
 
 /// request region
 const { AWS_REGION } = process.env.AWS_REGION;
@@ -146,7 +148,7 @@ exports.handler = async (event) => {
         };
 
         let updateResult = await wafv2.updateIPSet(params).promise();
-
     }
+    console('updateResult success');
 
 }
