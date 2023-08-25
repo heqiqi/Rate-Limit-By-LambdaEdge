@@ -146,9 +146,14 @@ exports.handler = async (event) => {
             Scope: 'CLOUDFRONT',
             Description: 'update ipset'
         };
-
-        let updateResult = await wafv2.updateIPSet(params).promise();
+        if (j > 2) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        try{
+            let updateResult = await wafv2.updateIPSet(params).promise();
+        } catch(e) {
+            console.log('catched'+e);
+            await wafv2.updateIPSet(params).promise();
+        }
     }
-    console('updateResult success');
-
 }
