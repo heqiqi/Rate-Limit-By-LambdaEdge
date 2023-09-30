@@ -27,7 +27,7 @@ export class DeployLambdaEdge extends Construct {
             ]
         });
 
-        const CustomResourceLambda = new lambda.Function(this, 'AssociaterEdgeAndWafLambda', {
+    const CustomResourceLambda = new lambda.Function(this, 'AssociaterEdgeAndWafLambda', {
             runtime: lambda.Runtime.NODEJS_16_X,    // execution environment
             code: lambda.Code.fromAsset('lambda'),  // code loaded from "lambda" directory
             handler: 'lambda-cf-associater.handler',
@@ -59,18 +59,29 @@ export class DeployLambdaEdge extends Construct {
                 action: 'invoke',
                 parameters: {
                     FunctionName: CustomResourceLambda.functionName,
+                    Payload: '{"phase":"create"}'
                 },
                 outputPaths: ['Contents.0.Key'],
-                physicalResourceId: cr.PhysicalResourceId.of(`create-exec-${Date.now()}`) // update this for different resources
+                physicalResourceId: cr.PhysicalResourceId.of(`create-exec-${Date.now()}`)
             },
             onUpdate: {
                 service: 'Lambda',
                 action: 'invoke',
                 parameters: {
                     FunctionName: CustomResourceLambda.functionName,
+                    Payload: '{"phase":"update"}'
                 },
-                physicalResourceId: cr.PhysicalResourceId.of(`update-exec-${Date.now()}`) // update this for different resources
+                physicalResourceId: cr.PhysicalResourceId.of(`update-exec-${Date.now()}`)
 
+            },
+            onDelete: {
+                service: 'Lambda',
+                action: 'invoke',
+                parameters: {
+                    FunctionName: CustomResourceLambda.functionName,
+                    Payload: '{"phase":"delete"}'
+                },
+                physicalResourceId: cr.PhysicalResourceId.of(`delete-exec-${Date.now()}`)
             },
             role: customResourceExecuteRole,
             policy: cr.AwsCustomResourcePolicy.fromSdkCalls({ resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE })

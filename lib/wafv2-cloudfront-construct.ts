@@ -68,6 +68,7 @@ export class WafCloudFrontStack extends Construct {
         // For Amazon CloudFront, don't use this call. 
         // Instead, use your CloudFront distribution configuration. 
         // To associate a web ACL, in the CloudFront call UpdateDistribution, set the web ACL ID to the Amazon Resource Name (ARN) of the web ACL. 
+        
         // Bullshit API design, waste me 2 hours for debug.
         // refer: https://docs.aws.amazon.com/waf/latest/APIReference/API_AssociateWebACL.html
         

@@ -50,17 +50,25 @@ function lambdaEdge(lambdaArn) {
 }
 
 exports.handler = async (event) => {
+    console.log('trigger event json:' + JSON.stringify(event));
     let dConfig = {};
     dConfig = await getDistConfig(dConfig);
     const larn = await getLambdaArn();
-    dConfig.DistributionConfig.DefaultCacheBehavior.LambdaFunctionAssociations = lambdaEdge(larn);
-    dConfig.DistributionConfig.WebACLId = webacl;  
+    if (event.phase !== 'delete') {
+        console.log("custom resource create/update event")
+        dConfig.DistributionConfig.DefaultCacheBehavior.LambdaFunctionAssociations = lambdaEdge(larn);
+        dConfig.DistributionConfig.WebACLId = webacl;
+    } else {
+        console.log("custom resource delete event")
+        dConfig.DistributionConfig.DefaultCacheBehavior.LambdaFunctionAssociations = {};
+        dConfig.DistributionConfig.WebACLId = "";
+    }
     console.log("distribution config: " + JSON.stringify({ DistributionConfig: dConfig.DistributionConfig, Id: distributionId }))
     await associateLambda({ DistributionConfig: dConfig.DistributionConfig, Id: distributionId, IfMatch: dConfig.ETag });
 
     const response = {
         statusCode: 200,
-        body: 'associated with L@E for: ' + distributionId,
+        body: 'associated with Lambda@Edge for: ' + distributionId,
     };
     return response;
 };

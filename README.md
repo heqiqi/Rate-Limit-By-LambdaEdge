@@ -26,3 +26,4 @@ cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总�
 ## 问题
 - cdk 不能使用循环，ipsets数量不能控制。
 - 删除stack时，lambda@edge function 失败。
+- Lambda的quota申请。
