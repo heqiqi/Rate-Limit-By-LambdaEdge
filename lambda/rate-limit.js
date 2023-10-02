@@ -23,11 +23,57 @@ const URL_LIST = (process.env.URL_LIST == null) ? 'URL_LIST_RRRRR' : Number(proc
 /// Duration of black ， 4 hours
 const BLOCK_PERIOD = (process.env.BLOCK_PERIOD == null) ? 4*60*60*1000 : process.env.BLOCK_PERIOD
 
-/// 
+/// dynamodb global tables enabled region
+const DDB_GLOBAL_TABLE_REGIONS = (process.env.DDB_GLOBAL_TABLE_REGIONS == null) ? 'DDB_GLOBAL_TABLE_REGIONS_RRRRR' : process.env.DDB_GLOBAL_TABLE_REGIONS
+
 
 /// request region
-const { AWS_REGION } = process.env.AWS_REGION;
+const AWS_REGION = process.env.AWS_REGION;
+console.log('AWS_REGION: ' + AWS_REGION + "\nprocess.env.AWS_REGION: " + process.env.AWS_REGION);
+const RegionsMap =
+{
+    'us-east-2': 'us',
+    'us-east-1': 'us',
+    'us-west-1': 'us',
+    'us-west-2': 'us',
+    'af-south-1': 'africa',
+    'ap-east-1': 'asia',
+    'ap-south-2': 'asia',
+    'ap-southeast-3': 'asia',
+    'ap-southeast-4': 'asia',
+    'ap-south-1': 'asia',
+    'ap-northeast-3': 'asia',
+    'ap-northeast-2': 'asia',
+    'ap-southeast-1': 'asia',
+    'ap-southeast-2': 'asia',
+    'ap-northeast-1': 'asia',
+    'ca-central-1': 'us',
+    'eu-central-1': 'eu',
+    'eu-west-1': 'eu',
+    'eu-west-2': 'eu',
+    'eu-south-1': 'eu',
+    'eu-west-3': 'eu',
+    'eu-south-2': 'eu',
+    'eu-north-1': 'eu',
+    'eu-central-2': 'eu',
+    'il-central-1': 'me',
+    'me-south-1': 'me',
+    'me-central-1': 'me',
+    'sa-east-1': 'us'
+}
 
+let regionsEnabled = {
+    'us': false,
+    'us-region': [],
+    'asia': false,
+    'asia-region': [],
+    'eu': false,
+    'eu-region': [],
+    'me': false,
+    'me-region': [],
+    'africa': false,
+    'africa-region': []
+}
 const https = require('https');
 
 const replicatedRegions = {
@@ -37,7 +83,7 @@ const replicatedRegions = {
   'ap-southeast-1': false,
   'ap-northeast-1': false,
   'ap-east-1': false
-};
+}
 
 const timeElapsed = Date.now();
 const today = new Date(timeElapsed);
@@ -63,11 +109,32 @@ function originLambdaErr () {
     }
 }
 
+function calcDynamoDBRegion () {
+    let DdbRegions = DDB_GLOBAL_TABLE_REGIONS.split(',');
+    for (let r of DdbRegions) {
+        let geo = RegionsMap[r];
+        regionsEnabled[geo] = true;
+        const geoRegion = geo+'-region';
+        let rList = regionsEnabled[geoRegion];
+        regionsEnabled[geoRegion].push(r);
+    }
+    console.log(`regionsEnabled map: ${JSON.stringify(regionsEnabled)}`);
+    if (regionsEnabled[RegionsMap[process.env.AWS_REGION]]){
+        //random index
+        const list = regionsEnabled[RegionsMap[process.env.AWS_REGION]+'-region']
+        const randomIndex = Math.floor(Math.random() * list.length);
+        console.log('onboarding region: ' + list[randomIndex]);
+        return list[randomIndex]
+    }else{
+        console.log('onboarding region: us-east-1');
+        return 'us-east-1'
+    }
+} 
 
 const AWS = require('aws-sdk')
 const ddb = new AWS.DynamoDB.DocumentClient({
     apiVersion: '2012-10-08',
-    region: replicatedRegions[process.env.AWS_REGION] ? process.env.AWS_REGION : 'us-east-1',
+    region: calcDynamoDBRegion(),
     //sslEnabled: false, 
     paramValidation: false, 
     convertResponseTypes: false,

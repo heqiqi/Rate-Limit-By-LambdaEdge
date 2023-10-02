@@ -16,14 +16,15 @@
 
 ## 使用命令
 ```
-cdk deploy --parameters cfDistId=E36TELAKGOJXZN --parameters rateLimit=30 --parameters urlRateLimit=20 --parameters urlList='/foo,/bar,/bar/1' --parameters ipSetNumber=5    --profile aws_cli_useast1
+cdk deploy --parameters cfDistId=E36TELAKGOJXZN --parameters rateLimit=30 --parameters urlRateLimit=20 --parameters urlList='/foo,/bar,/bar/1' --context ddbregions=us-west-2,ap-southeast-1,eu-central-1  RateLimitCfStack --profile useast1 
 ```
 ### 参数说明
 ```
-cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总限速速率，每分钟> --parameters urlRateLimit=<url限速速率> --parameters urlList=<URL list> --parameters ipSetNumber=<ipsets 数量>  --profile <profile>
+cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总限速速率，每分钟> --parameters urlRateLimit=<url限速速率> --parameters urlList=<URL list> --context ddbregions=<region1>,<region2>,<region3>  RateLimitCfStack  --profile <profile>
 ```
 
-## 问题
-- cdk 不能使用循环，ipsets数量不能控制。
-- 删除stack时，lambda@edge function 失败。
-- Lambda的quota申请。
+## 修改点
+- 将ipset个数设定为10个。
+- 默认部署区域设为us-east-1。
+- 增加ddbregions，选择在哪些区域开启Dynamodb global table。
+- custom resource 增加 onDelete操作，但是由于cloudfront deploy 耗时较长，所以 delete stacks时还是失败。

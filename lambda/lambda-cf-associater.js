@@ -3,6 +3,7 @@ const funcVersion = (process.env.funcVersion == null) ? '2' : process.env.funcVe
 const distributionId = (process.env.distributionId == null) ? 'E3O37UQQXPQMPO' : process.env.distributionId
 const webacl = (process.env.webacl == null) ? '' : process.env.webacl
 
+
 const AWS = require('aws-sdk');
 
 // Create service client

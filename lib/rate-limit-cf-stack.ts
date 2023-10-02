@@ -33,16 +33,17 @@ export class RateLimitCfStack extends cdk.Stack {
     const urlList = new cdk.CfnParameter(this, 'urlList', {
       description: 'Url List, format: \'/foo,/bar\'',
       type: 'String',
-      default: process.env.RATE || '[]',
+      default: process.env.RATE || "/foo,/bar",
     });
-    const ipSetNumber = new cdk.CfnParameter(this, 'ipSetNumber', {
-      description: 'Quantity of Ipset, default 5',
-      type: 'Number',
-      minValue: 1,
-      maxValue: 10,
-      default: process.env.RATE || 5,
-    });
-
+    // const globalTableRegion = new cdk.CfnParameter(this, 'globalTableRegion', {
+    //   description: 'Regions which DynamoDB Global Table enabled, default: us-east-1',
+    //   type: "String",
+    //   // allowedPattern: '.*us-east-1.*',
+    //   default: process.env.TABLES_REGION || 'us-east-1',
+    // });
+    
+    //const regionsList = cdk.Lazy.list({ produce(): string[] { return globalTableRegion.valueAsString.split(','); } });
+    const regionsList = this.node.tryGetContext('ddbregions').split(',');
     const table = new dynamodb.Table(this, 'Request-Rate-Limit-Access', {
       partitionKey: {
         name: 'ip',
@@ -53,9 +54,11 @@ export class RateLimitCfStack extends cdk.Stack {
         type: dynamodb.AttributeType.NUMBER
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      replicationRegions: regionsList,
       removalPolicy: RemovalPolicy.DESTROY,
+      waitForReplicationToFinish: true,
     });
-    const blackIpTable = new dynamodb.Table(this, 'Black-Ip-List', {
+    const blackIpTable =  new dynamodb.Table(this, 'Black-Ip-List', {
       partitionKey: {
         name: 'ip',
         type: dynamodb.AttributeType.STRING
@@ -65,7 +68,9 @@ export class RateLimitCfStack extends cdk.Stack {
         type: dynamodb.AttributeType.NUMBER
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      replicationRegions: regionsList,
       removalPolicy: RemovalPolicy.DESTROY,
+      waitForReplicationToFinish: true,
     });
     blackIpTable.addGlobalSecondaryIndex({
       indexName: 'secondIndex-createAt-index',
@@ -91,7 +96,8 @@ export class RateLimitCfStack extends cdk.Stack {
     .replace('black-ip-list',blackIpTable.tableName)
     .replace('GLOBAL_RATE_RRRRR', rateLimit.valueAsNumber+'')
     .replace('URL_LIST_RRRRR', urlList.valueAsString)
-    .replace('URL_RATE_RRRRR', urlRateLimit.valueAsNumber+'');
+    .replace('URL_RATE_RRRRR', urlRateLimit.valueAsNumber+'')
+    .replace('DDB_GLOBAL_TABLE_REGIONS_RRRRR', this.node.tryGetContext('ddbregions'));
 
     const RateLimitLambda = new lambda.Function(this, 'RateLimitLambdaEdge', {
       runtime: lambda.Runtime.NODEJS_16_X,    // execution environment
@@ -107,7 +113,7 @@ export class RateLimitCfStack extends cdk.Stack {
     const edgeFuncVersion = RateLimitLambda.currentVersion
 
     const wafConstruct = new WafCloudFrontStack(this, 'WafCloudFrontStack', {
-      ipSetNumber: ipSetNumber.valueAsNumber,
+      ipSetNumber: 10,
       distributionId: cfDistId.valueAsString,
     });
 
