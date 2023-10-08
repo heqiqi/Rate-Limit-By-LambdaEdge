@@ -16,7 +16,7 @@
 
 ## 使用命令
 ```
-cdk deploy --parameters cfDistId=E36TELAKGOJXZN --parameters rateLimit=30 --parameters urlRateLimit=20 --parameters urlList='/foo,/bar,/bar/1' --context ddbregions=us-west-2,ap-southeast-1,eu-central-1  RateLimitCfStack --profile useast1 
+cdk deploy --parameters cfDistId=ERPF1QJKIU7F3 --parameters rateLimit=10 --parameters urlRateLimit=5 --parameters urlList='/foo,/bar,/bar/1' --context ddbregions=us-west-2,ap-southeast-1,eu-central-1  RateLimitCfStack --profile useast1 
 ```
 ### 参数说明
 ```
