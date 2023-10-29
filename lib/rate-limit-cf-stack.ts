@@ -18,7 +18,7 @@ export class RateLimitCfStack extends cdk.Stack {
     const cfDistId = new cdk.CfnParameter(this, 'cfDistId', {
       description: 'CloudFront distribution id on which the Lambda@Edge is deployed',
       type: 'String',
-      default: process.env.DISTRIBUTE || "E3O37UQQXPQMPO",
+      //default: process.env.DISTRIBUTE || "E3O37UQQXPQMPO",
     });
     const rateLimit = new cdk.CfnParameter(this, 'rateLimit', {
       description: 'Total rate limited requests per minute',
@@ -43,7 +43,11 @@ export class RateLimitCfStack extends cdk.Stack {
     // });
     
     //const regionsList = cdk.Lazy.list({ produce(): string[] { return globalTableRegion.valueAsString.split(','); } });
-    const regionsList = this.node.tryGetContext('ddbregions').split(',');
+    const regionConf = this.node.tryGetContext('ddbregions');
+    let regionsList = null;
+    if(regionConf !== undefined){
+      regionsList = regionConf.split(',');
+    }
     const table = new dynamodb.Table(this, 'Request-Rate-Limit-Access', {
       partitionKey: {
         name: 'ip',
