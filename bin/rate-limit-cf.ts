@@ -17,6 +17,8 @@ new RateLimitCfStack(app, 'RateLimitCfStack', {
    * want to deploy the stack to. */
   // env: { account: '123456789012', region: 'us-east-1' },
   description: '(SO8155-net) - Rate limit By Lambda@Edge',
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
-  
+  synthesizer: new cdk.DefaultStackSynthesizer({
+    generateBootstrapVersionRule: false
+  })
+
 });

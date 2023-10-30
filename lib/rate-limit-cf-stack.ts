@@ -31,18 +31,10 @@ export class RateLimitCfStack extends cdk.Stack {
       default: process.env.RATE || 10,
     });
     const urlList = new cdk.CfnParameter(this, 'urlList', {
-      description: 'Url List, format: \'/foo,/bar\'',
+      description: 'The URL list that needs to be protected, separated by comma: \'/foo,/bar\'',
       type: 'String',
       default: process.env.RATE || "/foo,/bar",
     });
-    // const globalTableRegion = new cdk.CfnParameter(this, 'globalTableRegion', {
-    //   description: 'Regions which DynamoDB Global Table enabled, default: us-east-1',
-    //   type: "String",
-    //   // allowedPattern: '.*us-east-1.*',
-    //   default: process.env.TABLES_REGION || 'us-east-1',
-    // });
-    
-    //const regionsList = cdk.Lazy.list({ produce(): string[] { return globalTableRegion.valueAsString.split(','); } });
     const regionConf = this.node.tryGetContext('ddbregions');
     let regionsList = null;
     if(regionConf !== undefined){
@@ -101,7 +93,7 @@ export class RateLimitCfStack extends cdk.Stack {
     .replace('GLOBAL_RATE_RRRRR', rateLimit.valueAsNumber+'')
     .replace('URL_LIST_RRRRR', urlList.valueAsString)
     .replace('URL_RATE_RRRRR', urlRateLimit.valueAsNumber+'')
-    .replace('DDB_GLOBAL_TABLE_REGIONS_RRRRR', this.node.tryGetContext('ddbregions'));
+    .replace('DDB_GLOBAL_TABLE_REGIONS_RRRRR', this.node.tryGetContext('ddbregions') === undefined?('us-east-1') : this.node.tryGetContext('ddbregions'));
 
     const RateLimitLambda = new lambda.Function(this, 'RateLimitLambdaEdge', {
       runtime: lambda.Runtime.NODEJS_16_X,    // execution environment
