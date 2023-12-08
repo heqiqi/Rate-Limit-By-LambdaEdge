@@ -43,10 +43,26 @@ export class WafCloudFrontStack extends Construct {
                 }
               }
               blockRules.push(rule);
-              ipSetInfo.push({name:  ipSet.name, set: ipSet.attrId})
+              ipSetInfo.push({name:  ipSet.name, set: ipSet.attrId});
         }
         this.ipSets = ipSetInfo;
-        blockRules.push
+        const rateBaseRule = {
+            name: '100query_5min',
+            priority: 100,
+            action: { block: {} },
+            statement: {
+                rateBasedStatement: {
+                  limit: 100,
+                  aggregateKeyType: "IP",
+                },
+              },
+            visibilityConfig: {
+              cloudWatchMetricsEnabled: true,
+              metricName: 'block-waf-rate-100-5min-metric',
+              sampledRequestsEnabled: true
+            }
+          }
+        blockRules.push(rateBaseRule);
         // Create the WebACL
         const webAcl = new wafv2.CfnWebACL(this, 'WebACL-Rate-Limit', {
             defaultAction: {
