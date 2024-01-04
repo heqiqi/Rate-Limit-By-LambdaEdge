@@ -16,15 +16,10 @@
 
 ## 使用命令
 ```
-cdk deploy --parameters cfDistId=ERPF1QJKIU7F3 --parameters rateLimit=10 --parameters urlRateLimit=5 --parameters urlList='/foo,/bar,/bar/1' --context ddbregions=us-west-2,ap-southeast-1,eu-central-1  RateLimitCfStack --profile useast1 
+cdk deploy --parameters cfDistId=E10T6860ZLOY54 --parameters rateLimit=10 --parameters codeList='400,401,402,403,404,405,406,407,408,409,410,429,500,501,502' --context ddbregions=ap-southeast-1,eu-central-1  RateLimitCfStack --profile default 
 ```
 ### 参数说明
 ```
-cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总限速速率，每分钟> --parameters urlRateLimit=<url限速速率> --parameters urlList=<URL list> --context ddbregions=<region1>,<region2>,<region3>  RateLimitCfStack  --profile <profile>
+cdk deploy --parameters cfDistId=<distribution id> --parameters rateLimit=<总限速速率，每2分钟>  --parameters codeList=<status code list> --context ddbregions=<region1>,<region2>,<region3>  RateLimitCfStack  --profile <profile>
 ```
 
-## 修改点
-- 将ipset个数设定为10个。
-- 默认部署区域设为us-east-1。
-- 增加ddbregions，选择在哪些区域开启Dynamodb global table。
-- custom resource 增加 onDelete操作，但是由于cloudfront deploy 耗时较长，所以 delete stacks时还是失败。

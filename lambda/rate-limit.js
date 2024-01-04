@@ -8,8 +8,8 @@ const IP_TABLE_NAME = (process.env.IP_TABLE_NAME == null) ? 'black-ip-list' : pr
 /// allowed nation
 const ALLOWED_COUNTRY = (process.env.ALLOWED_COUNTRY == null) ? 'KH,CN,HK,MY,PH,SA,TH,VN,UA,SG,MM' : process.env.ALLOWED_COUNTRY
 
-/// Windows duration, default value: 1 minutes 
-const WINDOW_PERIOD_IN_SECONDS = (process.env.WINDOW_PERIOD_IN_SECONDS == null) ? 1 * 60 * 1000 : Number(process.env.WINDOW_PERIOD_IN_SECONDS) * 1000
+/// Windows duration, default value: 2 minutes 
+const WINDOW_PERIOD_IN_SECONDS = (process.env.WINDOW_PERIOD_IN_SECONDS == null) ? 2 * 60 * 1000 : Number(process.env.WINDOW_PERIOD_IN_SECONDS) * 1000
 
 /// GLOBAL_RATE
 const GLOBAL_RATE = (process.env.GLOBAL_RATE == null) ? 'GLOBAL_RATE_RRRRR' : Number(process.env.GLOBAL_RATE)
@@ -20,11 +20,14 @@ const URL_RATE = (process.env.URL_RATE == null) ? 'URL_RATE_RRRRR' : Number(proc
 /// URL_LIST
 const URL_LIST = (process.env.URL_LIST == null) ? 'URL_LIST_RRRRR' : Number(process.env.URL_LIST)
 
-/// Duration of black ， 4 hours
-const BLOCK_PERIOD = (process.env.BLOCK_PERIOD == null) ? 4*60*60*1000 : process.env.BLOCK_PERIOD
+/// Duration of black ， 10 min
+const BLOCK_PERIOD = (process.env.BLOCK_PERIOD == null) ? 10*60*1000 : process.env.BLOCK_PERIOD
 
 /// dynamodb global tables enabled region
 const DDB_GLOBAL_TABLE_REGIONS = (process.env.DDB_GLOBAL_TABLE_REGIONS == null) ? 'DDB_GLOBAL_TABLE_REGIONS_RRRRR' : process.env.DDB_GLOBAL_TABLE_REGIONS
+
+/// HTTP_CODE_LIST
+const CODE_LIST = (process.env.CODE_LIST == null) ? 'CODE_LIST_RRRRR' : Number(process.env.CODE_LIST)
 
 
 /// request region
@@ -157,28 +160,6 @@ function getUA(request){
     }
 }
 
-function isInWhiteList(request){
-    return (request.headers['x-amzn-waf-customer-wlist'] != null && request.headers['x-amzn-waf-customer-wlist'][0].value == "ip_whitelist") 
-}
-
-function isMobileClient(request){
-    return (request.headers['cloudfront-is-ios-viewer'] != null && request.headers['cloudfront-is-ios-viewer'][0].value == "true") 
-    || (request.headers['cloudfront-is-android-viewer'] != null && request.headers['cloudfront-is-android-viewer'][0].value == "true");
-}
-
-function isIosClient(request){
-    return (request.headers['cloudfront-is-ios-viewer'] != null && request.headers['cloudfront-is-ios-viewer'][0].value == "true");
-}
-
-function isAndroidClient(request){
-    return (request.headers['cloudfront-is-android-viewer'] != null && request.headers['cloudfront-is-android-viewer'][0].value == "true");
-}
-
-//cloudfront-is-tablet-viewer
-
-function isTabletClient(request){
-    return (request.headers['cloudfront-is-tablet-viewer'] != null && request.headers['cloudfront-is-tablet-viewer'][0].value == "true");
-}
 
 function getCountry(request){
     if(request.headers['cloudfront-viewer-country'] != null) {
@@ -187,16 +168,13 @@ function getCountry(request){
     return "unknown";
 }
 
-function isInAllowedCountry(request){
-    if(request.headers['cloudfront-viewer-country'] != null) {
-        let countryCode = getCountry(request);
-        let countries = ALLOWED_COUNTRY.split(',');
-        return countries.indexOf(countryCode) != -1;
-    }
-    return false;
+function isCountedCode(response){
+    let code = getStatus(response);
+    let errCodes = CODE_LIST.split(',');
+    return errCodes.indexOf(code) != -1;
 }
 
-function accessLogFactory(req){
+function accessLogFactory(req, code){
     return {
         ip:getIp(req),
         createAt: Date.now(),
@@ -204,6 +182,7 @@ function accessLogFactory(req){
         url: req.uri,
         from: AWS_REGION,
         country: getCountry(req),
+        statusCode: code,
         secIndex: today.toLocaleDateString(),
         ttl: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // in 24 hours
     }
@@ -225,7 +204,7 @@ async function createIps (tableName,ip) {
             "ip":ip,
             "createAt":timeElapsed,
             "secondIndex":"1",
-            "ttl": Math.floor((timeElapsed + 48*60*60*1000)/1000)
+            "ttl": Math.floor((timeElapsed + 24*60*60*1000)/1000)
             }
     }
     return await ddb.put(params).promise();    
@@ -264,70 +243,42 @@ async function queryItems (tableName, ip, windowTime) {
             ":windowTime": windowTime
         },
         //Limit: pageSize,
-        ScanIndexForward: false
+        ScanIndexForward: true
     }
     
     return await ddb.query(params).promise();
     
 }
 
-async function isBlocked(ip){
-    let ips = await queryIps(IP_TABLE_NAME, ip, (timeElapsed-BLOCK_PERIOD));
-    // console.log(JSON.stringify(ips))
-    return (ips.Count != null && ips.Count >0)
+function getStatus(response){
+    return response.status;
 }
 
-function getUri(request){
-    return request.uri;
+function countDataInWindow(data, windowStart, windowSize) {
+    const dataInWindow = data.filter(item => item.createAt >= windowStart && item.createAt <= (windowStart + windowSize));
+    
+    return dataInWindow.length;
 }
 
-// /website-images
-// /data/info
-const urlMatchCount = (array, url) => {
-    return array.filter((item) => {console.log('item url'+ item.url);return (item.url.indexOf(url) != -1)}).length;
-};
 
 exports.handler =  async function (event, context, callback) {
 
-    const request = event.Records[0].cf.request
-    if(isInWhiteList(request)){
-        callback(null, request);
-        return;
-    }
-    if(await isBlocked(getIp(request))) {
-        callback(null, rateLimit());
-        return;
-    }
-    
-
-    let uri = getUri(request)
-    let ipUrlCount = {}
-    ipUrlCount = await queryItems(TABLE_NAME, getIp(request), (Date.now() - WINDOW_PERIOD_IN_SECONDS))
-    let urlList = URL_LIST.split(',');
-    for(let u in urlList){
-         console.log("url1: " +uri +' u: ' + urlList[u]);
-        if(uri.indexOf(urlList[u]) != -1){
-        let rate = Number(URL_RATE);
-         if(ipUrlCount.Count == null || (ipUrlCount.Count >0 && urlMatchCount(ipUrlCount.Items, uri) >= rate)){
+    const request = event.Records[0].cf.request;
+    const response = event.Records[0].cf.response;
+    let LimitRate = Number(GLOBAL_RATE);
+    if (isCountedCode(response)) {
+        let code = getStatus(response);
+        await createItem(TABLE_NAME, accessLogFactory(request, code))
+        ipUrlCount = await queryItems(TABLE_NAME, getIp(request), (Date.now() - WINDOW_PERIOD_IN_SECONDS)); // query 2 min
+        if(ipUrlCount.Count == null || (ipUrlCount.Count >= LimitRate)){ // rate  5query / 2min
             await createIps(IP_TABLE_NAME,getIp(request));
-            callback(null, rateLimit());
-            return;
-         }
+        }else if( ipUrlCount.Count == null && ipUrlCount.Item.length > 0  ) {
+            console.log("TODO: sliding windows invoke function: countDataInWindow");
         }
     }
-    
-    let ipCount = {}
-    ipCount = await queryItems(TABLE_NAME, getIp(request), (Date.now() - WINDOW_PERIOD_IN_SECONDS))
-    let LimitRate = Number(GLOBAL_RATE);
-    console.log("LimitRate:" + LimitRate);
-    let urlCount = 0
-    if(ipCount.Count == null || (ipCount.Count-urlCount) >= LimitRate){
-        await createIps(IP_TABLE_NAME,getIp(request));
-        callback(null, rateLimit());
-    } else {
-        await createItem(TABLE_NAME, accessLogFactory(request))
-        callback(null, request);
-    }
+
+    callback(null, response);
+    return;
 
 }
 

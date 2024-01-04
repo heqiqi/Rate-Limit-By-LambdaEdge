@@ -42,7 +42,7 @@ function lambdaEdge(lambdaArn) {
         Quantity: 1, /* required */
         Items: [
             {
-                EventType: 'origin-request', /* required */
+                EventType: 'origin-response', /* required */
                 LambdaFunctionARN: lambdaArn, /* required */
                 IncludeBody: false
             },

@@ -9,7 +9,7 @@ const TABLE_NAME = (process.env.TABLE_NAME == null) ? 'black_ip_list' : process.
 /// Ips of black 
 const WAFV2_IPSETS = (process.env.WAFV2_IPSETS == null) ? '[]' : process.env.WAFV2_IPSETS
 /// Duration of black 
-const BLOCK_PERIOD = (process.env.BLOCK_PERIOD == null) ? 4*60*60*1000 : process.env.BLOCK_PERIOD
+const BLOCK_PERIOD = (process.env.BLOCK_PERIOD == null) ? 10*60*1000 : process.env.BLOCK_PERIOD // block 10 min
 
 /// ipset on WAFv2
 const IPSETS = JSON.parse(WAFV2_IPSETS);
@@ -105,8 +105,8 @@ exports.handler = async (event) => {
             // console.log("last page number: " + j);
         }
         let ips = {};
-        ips = await queryIpSet(timeElapsed - BLOCK_PERIOD, 10000, lastEvaluatedKey);
-        
+        ips = await queryIpSet(Date.now() - BLOCK_PERIOD, 10000, lastEvaluatedKey);
+        console.log("ips: "+JSON.stringify(ips) + "time: " + (Date.now() - BLOCK_PERIOD));
          if (typeof(ips.LastEvaluatedKey) !== 'undefined') {
             lastEvaluatedKey = ips.LastEvaluatedKey;
         }

@@ -35,6 +35,11 @@ export class RateLimitCfStack extends cdk.Stack {
       type: 'String',
       default: process.env.RATE || "/foo,/bar",
     });
+    const codeList = new cdk.CfnParameter(this, 'codeList', {
+      description: 'The status code that needs to be protected, separated by comma: \'400,404,500\'',
+      type: 'String',
+      default: process.env.RATE || "400,404,500",
+    });
     const regionConf = this.node.tryGetContext('ddbregions');
     let regionsList = null;
     if(regionConf !== undefined){
@@ -93,6 +98,7 @@ export class RateLimitCfStack extends cdk.Stack {
     .replace('GLOBAL_RATE_RRRRR', rateLimit.valueAsNumber+'')
     .replace('URL_LIST_RRRRR', urlList.valueAsString)
     .replace('URL_RATE_RRRRR', urlRateLimit.valueAsNumber+'')
+    .replace('CODE_LIST_RRRRR', codeList.valueAsString+'')
     .replace('DDB_GLOBAL_TABLE_REGIONS_RRRRR', this.node.tryGetContext('ddbregions') === undefined?('us-east-1') : this.node.tryGetContext('ddbregions'));
 
     const RateLimitLambda = new lambda.Function(this, 'RateLimitLambdaEdge', {
